@@ -38,7 +38,7 @@ from .const import (
     WORK_MODE_TOU,
 )
 from .coordinator import AtmoceCoordinator
-from .sensor import _device_info
+from .sensor import _battery_device_info, _gateway_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class AtmoceRemoteControlSwitch(CoordinatorEntity[AtmoceCoordinator], SwitchEnti
     def __init__(self, coordinator: AtmoceCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.serial_number}_remote_control"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def is_on(self) -> bool | None:
@@ -83,7 +83,7 @@ class AtmoceGridChargeSwitch(CoordinatorEntity[AtmoceCoordinator], SwitchEntity)
     def __init__(self, coordinator: AtmoceCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.serial_number}_grid_charge"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def available(self) -> bool:
@@ -110,7 +110,7 @@ class AtmoceSellToGridSwitch(CoordinatorEntity[AtmoceCoordinator], SwitchEntity)
     def __init__(self, coordinator: AtmoceCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.serial_number}_sell_to_grid"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def available(self) -> bool:
@@ -144,7 +144,7 @@ class AtmoceNumber(CoordinatorEntity[AtmoceCoordinator], NumberEntity):
         # Name comes from `entity.number.<key>` in the translation files.
         self._attr_translation_key = key
         self._attr_unique_id = f"{coordinator.serial_number}_{key}"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def native_value(self) -> float | None:
@@ -432,7 +432,7 @@ class AtmoceForcedCommandSelect(CoordinatorEntity[AtmoceCoordinator], SelectEnti
         # _attr_options as an instance attribute, so ClassVar would clash.
         self._attr_options = list(self._CMD_TO_OPTION.values())
         self._attr_unique_id = f"{coordinator.serial_number}_forced_command"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def current_option(self) -> str | None:
@@ -487,7 +487,7 @@ class AtmoceWorkModeSelect(CoordinatorEntity[AtmoceCoordinator], SelectEntity):
         super().__init__(coordinator)
         self._attr_options = list(self._MODE_TO_OPTION.values())
         self._attr_unique_id = f"{coordinator.serial_number}_work_mode"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def available(self) -> bool:
@@ -527,7 +527,7 @@ class AtmoceForcedModeSelect(CoordinatorEntity[AtmoceCoordinator], SelectEntity)
         # See AtmoceForcedCommandSelect for why this is not a class attribute.
         self._attr_options = list(self._MODE_TO_OPTION.values())
         self._attr_unique_id = f"{coordinator.serial_number}_forced_mode"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def current_option(self) -> str | None:
@@ -556,7 +556,7 @@ class AtmoceResetButton(CoordinatorEntity[AtmoceCoordinator], ButtonEntity):
     def __init__(self, coordinator: AtmoceCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.serial_number}_reset"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _gateway_device_info(coordinator)
 
     async def async_press(self) -> None:
         await self.coordinator.async_reset_gateway()

@@ -187,6 +187,11 @@ class AtmoceCoordinator(DataUpdateCoordinator):
         return self._active_source
 
     @property
+    def has_battery(self) -> bool:
+        """Whether battery-specific entities should be provided."""
+        return self.battery_count > 0
+
+    @property
     def connection_errors(self) -> int:
         return self._connection_errors
 
@@ -352,7 +357,7 @@ class AtmoceCoordinator(DataUpdateCoordinator):
             else 0.0
         )
         soc = data.get("battery_soc") or 0
-        if avg_consumption_w > 10:
+        if self.has_battery and avg_consumption_w > 10:
             available_kwh = (soc / 100.0) * self.capacity_kwh
             data["autonomy_hours"] = round(available_kwh / (avg_consumption_w / 1000.0), 1)
         else:
@@ -370,7 +375,9 @@ class AtmoceCoordinator(DataUpdateCoordinator):
         # 3. Battery healthy binary sensor
         # Returns False if SOC hasn't changed meaningfully in the last 4h of data
         # (simplified: flag if SOC == 0 when pv_power > 100 W)
-        data["battery_healthy"] = not (soc == 0 and pv_power > 100)
+        data["battery_healthy"] = (
+            not (soc == 0 and pv_power > 100) if self.has_battery else None
+        )
 
         return data
 

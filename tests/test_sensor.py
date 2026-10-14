@@ -1,10 +1,13 @@
 """Tests for AtmoceSensor entity."""
 from unittest.mock import MagicMock
 
-import pytest
-
-from custom_components.atmoce.sensor import AtmoceSensor, SENSOR_DESCRIPTIONS, _device_info
 from custom_components.atmoce.const import DOMAIN
+from custom_components.atmoce.sensor import (
+    SENSOR_DESCRIPTIONS,
+    AtmoceSensor,
+    _battery_device_info,
+    _gateway_device_info,
+)
 
 
 def _make_coordinator(data: dict):
@@ -100,10 +103,29 @@ class TestSensorDescriptions:
 
 
 class TestDeviceInfo:
-    def test_device_info_fields(self):
+    def test_gateway_device_info_fields(self):
         coordinator = _make_coordinator({})
-        info = _device_info(coordinator)
+        info = _gateway_device_info(coordinator)
         assert (DOMAIN, "SN123456") in info["identifiers"]
         assert info["manufacturer"] == "Atmoce"
-        assert info["model"] == "MS-7K-U"
+        assert info["model"] == "Gateway"
+        assert info["name"] == "Atmoce Gateway"
         assert "192.168.1.100" in info["configuration_url"]
+
+    def test_battery_device_is_attached_to_gateway(self):
+        coordinator = _make_coordinator({})
+        info = _battery_device_info(coordinator)
+
+        assert (DOMAIN, "SN123456_battery") in info["identifiers"]
+        assert info["model"] == "MS-7K-U"
+        assert info["via_device"] == (DOMAIN, "SN123456")
+
+    def test_sensor_device_assignment_is_explicit(self, coordinator):
+        grid = next(desc for desc in SENSOR_DESCRIPTIONS if desc.key == "grid_power")
+        battery = next(desc for desc in SENSOR_DESCRIPTIONS if desc.key == "battery_soc")
+
+        grid_sensor = AtmoceSensor(coordinator, grid)
+        battery_sensor = AtmoceSensor(coordinator, battery)
+
+        assert grid_sensor._attr_device_info["model"] == "Gateway"
+        assert battery_sensor._attr_device_info["model"] == "MS-7K-U"

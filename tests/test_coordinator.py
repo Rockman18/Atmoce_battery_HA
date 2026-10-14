@@ -46,6 +46,19 @@ class TestComputedAutonomy:
         # avg consumption < 10 W → sensor unavailable
         assert result["autonomy_hours"] is None
 
+    def test_gateway_without_battery_has_no_battery_derived_state(self, coordinator):
+        coordinator.battery_count = 0
+        result = coordinator._compute_derived({
+            "battery_soc": 0,
+            "pv_power": 200,
+            "battery_power": 0,
+            "grid_power": 0,
+        })
+
+        assert coordinator.has_battery is False
+        assert result["autonomy_hours"] is None
+        assert result["battery_healthy"] is None
+
     def test_autonomy_none_when_soc_zero(self, coordinator):
         data = {
             "battery_soc": 0,

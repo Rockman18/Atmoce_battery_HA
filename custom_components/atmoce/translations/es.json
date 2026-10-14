@@ -15,14 +15,14 @@
       },
       "battery": {
         "title": "Baterías",
-        "description": "¿Cuántas baterías Atmoce MS-7K-U tienes instaladas? Atmoce vende una única unidad de 7 kWh, así que con el número basta para calcular la capacidad útil y los límites de potencia. Una MS-14K-U son dos de estas unidades.",
+        "description": "¿Cuántas baterías Atmoce MS-7K-U tienes instaladas? Indica 0 si solo tienes la pasarela, sin baterías. Atmoce vende una única unidad de 7 kWh, así que con el número basta para calcular la capacidad útil y los límites de potencia. Una MS-14K-U son dos de estas unidades.",
         "data": {
           "battery_count": "Número de baterías",
           "manual_specs": "Introducir las especificaciones a mano"
         },
         "data_description": {
-          "battery_count": "Cada unidad suma 7 kWh, 3,75 kW de carga y 4,5 kW de descarga.",
-          "manual_specs": "Márcalo si tienes otro equipo, o si tu inversor limita la potencia total por debajo de la suma de las unidades."
+          "battery_count": "Cada unidad suma 7 kWh, 3,75 kW de carga y 4,5 kW de descarga. Indica 0 para una instalación solo con pasarela.",
+          "manual_specs": "Márcalo si tienes otro equipo, o si tu inversor limita la potencia total por debajo de la suma de las unidades. Solo se aplica si hay al menos una batería."
         }
       },
       "manual_battery": {
@@ -71,12 +71,12 @@
       },
       "reconfigure": {
         "title": "Baterías instaladas",
-        "description": "Usa esto cuando añadas o quites una batería. La capacidad y los límites de potencia se fijan al configurar la integración y alimentan el sensor de autonomía y los deslizadores de potencia forzada, así que hay que actualizarlos si cambia el número de unidades.\n\nNo se toca nada más: el gateway, las credenciales y el histórico de las entidades se mantienen tal cual.",
+        "description": "Úsalo después de añadir o quitar baterías. Indica 0 para una instalación solo con pasarela; entonces se eliminarán las entidades específicas de batería. La capacidad y los límites de potencia se recalculan si hay baterías instaladas.\n\nNo se toca nada más: el gateway, las credenciales y el histórico de las entidades se mantienen tal cual.",
         "data": {
           "battery_count": "Número de baterías"
         },
         "data_description": {
-          "battery_count": "Cada unidad MS-7K-U suma 7 kWh, 3,75 kW de carga y 4,5 kW de descarga. Una MS-14K-U cuenta como dos unidades."
+          "battery_count": "Cada unidad MS-7K-U suma 7 kWh, 3,75 kW de carga y 4,5 kW de descarga. Una MS-14K-U cuenta como dos unidades; indica 0 para dejar solo la pasarela."
         }
       }
     },

@@ -480,6 +480,11 @@ class TestForcedModeSelect:
 # ── Button entities ───────────────────────────────────────────────────────────
 
 class TestResetButton:
+    def test_is_attached_to_gateway_device(self):
+        coord = _make_coordinator()
+        entity = AtmoceResetButton(coord)
+        assert entity._attr_device_info["model"] == "Gateway"
+
     @pytest.mark.asyncio
     async def test_press_calls_reset(self):
         coord = _make_coordinator()

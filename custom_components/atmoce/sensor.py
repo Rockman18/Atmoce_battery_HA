@@ -33,6 +33,7 @@ from .coordinator import AtmoceCoordinator
 class AtmoceeSensorDescription(SensorEntityDescription):
     data_key: str
     value_map: dict[int, str] | None = None  # for status enums
+    is_battery: bool = False
 
 
 SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
@@ -141,6 +142,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_soc",
         data_key="battery_soc",
+        is_battery=True,
         name="Battery SOC",
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
@@ -150,6 +152,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_power",
         data_key="battery_power",
+        is_battery=True,
         name="Battery Power",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -159,6 +162,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_status",
         data_key="battery_status",
+        is_battery=True,
         name="Battery Status",
         icon="mdi:battery-charging",
         value_map={1: "charging", 2: "discharging", 99: "idle"},
@@ -166,6 +170,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_mode",
         data_key="battery_mode",
+        is_battery=True,
         name="Battery Operating Mode",
         icon="mdi:battery-sync",
         value_map={1: "self_consumption", 2: "tou", 10: "remote_control"},
@@ -173,6 +178,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_dispatch_power",
         data_key="battery_dispatch_power",
+        is_battery=True,
         name="Battery Dispatch Power",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -182,6 +188,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_charged_daily",
         data_key="battery_charged_daily",
+        is_battery=True,
         name="Battery Charged Daily",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -191,6 +198,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_discharged_daily",
         data_key="battery_discharged_daily",
+        is_battery=True,
         name="Battery Discharged Daily",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -200,6 +208,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_charged_total",
         data_key="battery_charged_total",
+        is_battery=True,
         name="Battery Charged Total",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -209,6 +218,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="battery_discharged_total",
         data_key="battery_discharged_total",
+        is_battery=True,
         name="Battery Discharged Total",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -218,6 +228,7 @@ SENSOR_DESCRIPTIONS: tuple[AtmoceeSensorDescription, ...] = (
     AtmoceeSensorDescription(
         key="autonomy_hours",
         data_key="autonomy_hours",
+        is_battery=True,
         name="Battery Autonomy",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTime.HOURS,
@@ -258,7 +269,9 @@ async def async_setup_entry(
 ) -> None:
     coordinator: AtmoceCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        AtmoceSensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
+        AtmoceSensor(coordinator, description)
+        for description in SENSOR_DESCRIPTIONS
+        if coordinator.has_battery or not description.is_battery
     )
 
 
@@ -280,7 +293,11 @@ class AtmoceSensor(CoordinatorEntity[AtmoceCoordinator], SensorEntity):
         # description stays as the fallback for a key without a translation.
         self._attr_translation_key = description.key
         self._attr_unique_id = f"{coordinator.serial_number}_{description.key}"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = (
+            _battery_device_info(coordinator)
+            if description.is_battery
+            else _gateway_device_info(coordinator)
+        )
 
     @property
     def native_value(self) -> Any:
@@ -293,13 +310,23 @@ class AtmoceSensor(CoordinatorEntity[AtmoceCoordinator], SensorEntity):
         return raw
 
 
-def _device_info(coordinator: AtmoceCoordinator) -> DeviceInfo:
+def _gateway_device_info(coordinator: AtmoceCoordinator) -> DeviceInfo:
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.serial_number)},
-        name=f"Atmoce {coordinator.battery_model}",
+        name="Atmoce Gateway",
         manufacturer="Atmoce",
-        model=coordinator.battery_model,
+        model="Gateway",
         sw_version=coordinator.firmware_version,
         hw_version=str(coordinator.hw_version),
         configuration_url=f"http://{coordinator.config_entry.data['host']}",
+    )
+
+
+def _battery_device_info(coordinator: AtmoceCoordinator) -> DeviceInfo:
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{coordinator.serial_number}_battery")},
+        name=f"Atmoce {coordinator.battery_model}",
+        manufacturer="Atmoce",
+        model=coordinator.battery_model,
+        via_device=(DOMAIN, coordinator.serial_number),
     )

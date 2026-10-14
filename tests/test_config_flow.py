@@ -115,6 +115,16 @@ class TestFallbackStepValidation:
         })
         flow.async_create_entry.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_gateway_only_config_uses_gateway_title(self):
+        flow = self._make_flow()
+        flow._data[CONF_BATTERY_COUNT] = 0
+
+        await flow.async_step_fallback(CLOUD_INPUT_DISABLED)
+
+        _, kwargs = flow.async_create_entry.call_args
+        assert kwargs["title"] == "Atmoce Gateway @ 192.168.1.100"
+
 
 class TestCloudLoginStep:
     """The atmocecloud.com login step: no partner keys, no validation gate."""
@@ -171,6 +181,7 @@ class TestBatteryCount:
         flow.context = {}
         flow.async_show_form = MagicMock(return_value={"type": "form"})
         flow.async_step_cloud = AsyncMock(return_value={"type": "form"})
+        flow.async_step_fallback = AsyncMock(return_value={"type": "form"})
         return flow
 
     @pytest.mark.asyncio
@@ -206,6 +217,7 @@ class TestBatteryCount:
         validators = kwargs["data_schema"].schema[field].validators
         config = validators[0].config
         assert config["mode"] == "box"
+        assert config["min"] == 0
         assert config["max"] == 16
 
     @pytest.mark.asyncio
@@ -240,6 +252,24 @@ class TestBatteryCount:
 
         flow.async_step_manual_battery.assert_awaited_once()
         assert flow._data[CONF_BATTERY_MODEL] == "manual"
+
+    @pytest.mark.asyncio
+    async def test_zero_batteries_skip_manual_specs_and_store_zero_limits(self):
+        flow = self._make_flow()
+        flow.async_step_manual_battery = AsyncMock(return_value={"type": "form"})
+
+        await flow.async_step_battery({
+            CONF_BATTERY_COUNT: 0,
+            "manual_specs": True,
+        })
+
+        flow.async_step_manual_battery.assert_not_awaited()
+        flow.async_step_cloud.assert_not_awaited()
+        flow.async_step_fallback.assert_awaited_once()
+        assert flow._data[CONF_BATTERY_COUNT] == 0
+        assert flow._data[CONF_CAPACITY_KWH] == 0
+        assert flow._data[CONF_CHARGE_KW] == 0
+        assert flow._data[CONF_DISCHARGE_KW] == 0
 
     def test_three_batteries_avoid_float_drift(self):
         """3 * 3.75 must not land on 11.249999999999998."""
@@ -283,6 +313,38 @@ class TestReconfigure:
         assert kwargs["data_updates"][CONF_CAPACITY_KWH] == 14.0
         assert kwargs["data_updates"][CONF_CHARGE_KW] == 7.5
         assert kwargs["data_updates"][CONF_BATTERY_COUNT] == 2
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_accepts_zero_batteries(self):
+        flow, entry = self._make_flow({
+            CONF_BATTERY_MODEL: "MS-7K-U",
+            CONF_BATTERY_COUNT: 1,
+            CONF_CAPACITY_KWH: 7.0,
+        })
+
+        await flow.async_step_reconfigure({CONF_BATTERY_COUNT: 0})
+
+        _, kwargs = flow.async_update_reload_and_abort.call_args
+        specs = kwargs["data_updates"]
+        assert specs[CONF_BATTERY_COUNT] == 0
+        assert specs[CONF_CAPACITY_KWH] == 0
+        assert specs[CONF_CHARGE_KW] == 0
+        assert specs[CONF_DISCHARGE_KW] == 0
+
+    @pytest.mark.asyncio
+    async def test_form_prefills_zero_battery_count(self):
+        flow, _ = self._make_flow({
+            CONF_BATTERY_MODEL: "MS-7K-U",
+            CONF_BATTERY_COUNT: 0,
+        })
+
+        await flow.async_step_reconfigure(None)
+
+        _, kwargs = flow.async_show_form.call_args
+        defaults = {
+            str(k): k.default() for k in kwargs["data_schema"].schema
+        }
+        assert defaults[CONF_BATTERY_COUNT] == 0
 
     @pytest.mark.asyncio
     async def test_form_prefills_the_stored_count(self):

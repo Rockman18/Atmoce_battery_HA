@@ -72,7 +72,7 @@ def _gateway_schema(
 _COUNT_SELECTOR = vol.All(
     selector.NumberSelector(
         selector.NumberSelectorConfig(
-            min=1,
+            min=0,
             max=MAX_BATTERY_COUNT,
             step=1,
             mode=selector.NumberSelectorMode.BOX,
@@ -166,7 +166,7 @@ def _stored_count(entry_data: dict[str, Any]) -> int:
     from the stored capacity: an MS-14K-U comes out as the two units it is.
     """
     if (count := entry_data.get(CONF_BATTERY_COUNT)) is not None:
-        return max(1, min(MAX_BATTERY_COUNT, int(count)))
+        return max(0, min(MAX_BATTERY_COUNT, int(count)))
 
     capacity = entry_data.get(CONF_CAPACITY_KWH)
     unit_capacity = BATTERY_MODELS[UNIT_BATTERY_MODEL]["capacity_kwh"]
@@ -224,12 +224,13 @@ class AtmoceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            if user_input.get(CONF_MANUAL_SPECS):
+            count = user_input.get(CONF_BATTERY_COUNT, DEFAULT_BATTERY_COUNT)
+            if count > 0 and user_input.get(CONF_MANUAL_SPECS):
                 self._data[CONF_BATTERY_MODEL] = "manual"
                 return await self.async_step_manual_battery()
-            self._data.update(
-                _specs_for(user_input.get(CONF_BATTERY_COUNT, DEFAULT_BATTERY_COUNT))
-            )
+            self._data.update(_specs_for(count))
+            if count == 0:
+                return await self.async_step_fallback()
             return await self.async_step_cloud()
 
         return self.async_show_form(
@@ -280,8 +281,13 @@ class AtmoceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 self._data.update(user_input)
                 host = self._data[CONF_HOST]
+                count = self._data.get(CONF_BATTERY_COUNT, DEFAULT_BATTERY_COUNT)
                 model = self._data.get(CONF_BATTERY_MODEL, "manual")
-                title = f"Atmoce {model} @ {host}"
+                title = (
+                    f"Atmoce Gateway @ {host}"
+                    if count == 0
+                    else f"Atmoce {model} @ {host}"
+                )
                 return self.async_create_entry(title=title, data=self._data)
 
         return self.async_show_form(

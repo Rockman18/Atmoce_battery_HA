@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import AtmoceCoordinator
-from .sensor import _device_info
+from .sensor import _battery_device_info
 
 
 class AtmoceBatteryProblem(CoordinatorEntity[AtmoceCoordinator], BinarySensorEntity):
@@ -37,7 +37,7 @@ class AtmoceBatteryProblem(CoordinatorEntity[AtmoceCoordinator], BinarySensorEnt
     def __init__(self, coordinator: AtmoceCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.serial_number}_battery_problem"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = _battery_device_info(coordinator)
 
     @property
     def is_on(self) -> bool | None:
@@ -49,4 +49,5 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator: AtmoceCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([AtmoceBatteryProblem(coordinator)])
+    if coordinator.has_battery:
+        async_add_entities([AtmoceBatteryProblem(coordinator)])

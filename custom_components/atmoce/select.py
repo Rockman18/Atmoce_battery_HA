@@ -16,6 +16,10 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator: AtmoceCoordinator = hass.data[DOMAIN][entry.entry_id]
+    if not coordinator.has_battery:
+        async_add_entities([])
+        return
+
     async_add_entities([
         AtmoceForcedCommandSelect(coordinator),
         AtmoceForcedModeSelect(coordinator),
